@@ -1,66 +1,40 @@
-<!DOCTYPE html>
-<html lang="no">
-<head>
-    <meta charset="UTF-8">
-    <meta http-equiv="refresh" content="10">
-    <title>Raspberry Pi - Status Dashbord</title>
-    <style>
-        body { font-family: system-ui, -apple-system, sans-serif; background: #0f172a; color: #f8fafc; padding: 2rem; margin: 0; }
-        .container { max-width: 800px; margin: 0 auto; }
-        h1 { font-size: 1.8rem; margin-bottom: 0.2rem; }
-        .sub { color: #94a3b8; font-size: 0.85rem; margin-bottom: 1.5rem; }
-        .card { background: #1e293b; border-radius: 10px; padding: 1.25rem; margin-top: 1rem; border: 1px solid #334155; }
-        .card-header { display: flex; justify-content: space-between; align-items: center; }
-        .card-header h3 { margin: 0; font-size: 1.1rem; }
-        .badge { padding: 0.25rem 0.65rem; border-radius: 12px; font-weight: bold; font-size: 0.75rem; text-transform: uppercase; }
-        .ok { background: #065f46; color: #34d399; }
-        .error { background: #991b1b; color: #f87171; }
-        .error-box { margin-top: 0.75rem; background: #450a0a; border: 1px solid #7f1d1d; color: #fca5a5; padding: 0.5rem; border-radius: 6px; font-size: 0.8rem; }
-    </style>
-</head>
-<body>
-    <div class="container">
-        <h1>Overvåkingstjenester</h1>
-        <p class="sub">Siden oppdateres automatisk hvert 10. sekund</p>
-        <div id="grid">
+<script>
+    async function fetchStatus() {
+        try {
+            const response = await fetch('status.json?t=' + new Date().getTime());
+            if (!response.ok) throw new Error("Kunne ikke hente status.json (HTTP " + response.status + ")");
             
-        <div class="card">
-            <div class="card-header">
-                <h3>Nødvarsel-overvåker</h3>
-                <span class="badge ok">OK</span>
-            </div>
-            <p class="sub">Siste sjekk: <strong>2026-10-07 08:29:02</strong></p>
-            
-        </div>
-        
-        <div class="card">
-            <div class="card-header">
-                <h3>Mattilsynet-overvåker</h3>
-                <span class="badge ok">OK</span>
-            </div>
-            <p class="sub">Siste sjekk: <strong>2026-10-07 08:25:03</strong></p>
-            
-        </div>
-        
-        <div class="card">
-            <div class="card-header">
-                <h3>Ekstremvær-overvåker</h3>
-                <span class="badge ok">OK</span>
-            </div>
-            <p class="sub">Siste sjekk: <strong>2026-10-07 08:25:02</strong></p>
-            
-        </div>
-        
-        <div class="card">
-            <div class="card-header">
-                <h3>SSB KPI-overvåker</h3>
-                <span class="badge ok">OK</span>
-            </div>
-            <p class="sub">Siste sjekk: <strong>2026-10-07 08:02:48</strong></p>
-            
-        </div>
-        
-        </div>
-    </div>
-</body>
-</html>
+            const data = await response.json();
+            const container = document.getElementById('dashboard');
+            container.innerHTML = '';
+
+            if (Object.keys(data).length === 0) {
+                container.innerHTML = '<p style="text-align:center; grid-column: 1/-1;">Ingen status fundet.</p>';
+                return;
+            }
+
+            for (const [key, item] of Object.entries(data)) {
+                const statusClass = (item.status || 'unknown').toLowerCase();
+                const card = document.createElement('div');
+                card.className = 'card ' + statusClass;
+                
+                var errorHtml = item.error_msg ? '<div class="error-msg">⚠️ ' + item.error_msg + '</div>' : '';
+                
+                card.innerHTML = 
+                    '<div class="header-row">' +
+                        '<h2 class="card-title">' + (item.name || key) + '</h2>' +
+                        '<span class="status-badge">' + (item.status || 'UKJENT') + '</span>' +
+                    '</div>' +
+                    errorHtml +
+                    '<div class="meta">Sidst opdateret: ' + (item.last_updated || 'Ukendt') + '</div>';
+                
+                container.appendChild(card);
+            }
+        } catch (err) {
+            document.getElementById('dashboard').innerHTML = '<p style="color: #ef4444; text-align:center; grid-column: 1/-1;">Fejl ved indlæsning: ' + err.message + '</p>';
+        }
+    }
+
+    fetchStatus();
+    setInterval(fetchStatus, 30000);
+</script>
