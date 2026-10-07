@@ -2,65 +2,68 @@
 <html lang="no">
 <head>
     <meta charset="UTF-8">
-    <meta http-equiv="refresh" content="10">
-    <title>Raspberry Pi - Status Dashbord</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Overvåkningsdashbord</title>
     <style>
-        body { font-family: system-ui, -apple-system, sans-serif; background: #0f172a; color: #f8fafc; padding: 2rem; margin: 0; }
-        .container { max-width: 800px; margin: 0 auto; }
-        h1 { font-size: 1.8rem; margin-bottom: 0.2rem; }
-        .sub { color: #94a3b8; font-size: 0.85rem; margin-bottom: 1.5rem; }
-        .card { background: #1e293b; border-radius: 10px; padding: 1.25rem; margin-top: 1rem; border: 1px solid #334155; }
-        .card-header { display: flex; justify-content: space-between; align-items: center; }
-        .card-header h3 { margin: 0; font-size: 1.1rem; }
-        .badge { padding: 0.25rem 0.65rem; border-radius: 12px; font-weight: bold; font-size: 0.75rem; text-transform: uppercase; }
-        .ok { background: #065f46; color: #34d399; }
-        .error { background: #991b1b; color: #f87171; }
-        .error-box { margin-top: 0.75rem; background: #450a0a; border: 1px solid #7f1d1d; color: #fca5a5; padding: 0.5rem; border-radius: 6px; font-size: 0.8rem; }
+        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background: #0f172a; color: #f8fafc; padding: 20px; max-width: 900px; margin: 0 auto; }
+        h1 { font-size: 1.8rem; margin-bottom: 24px; text-align: center; }
+        .grid { display: grid; gap: 16px; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); }
+        .card { background: #1e293b; border-radius: 8px; padding: 20px; border-left: 6px solid #64748b; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.3); }
+        .card.ok { border-left-color: #22c55e; }
+        .card.warning { border-left-color: #eab308; }
+        .card.error { border-left-color: #ef4444; }
+        .header-row { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; }
+        .card-title { font-size: 1.1rem; font-weight: 600; margin: 0; }
+        .status-badge { display: inline-block; padding: 4px 10px; border-radius: 9999px; font-weight: 700; font-size: 0.75rem; text-transform: uppercase; }
+        .ok .status-badge { background: #166534; color: #4ade80; }
+        .warning .status-badge { background: #854d0e; color: #fef08a; }
+        .error .status-badge { background: #991b1b; color: #fca5a5; }
+        .meta { font-size: 0.85rem; color: #94a3b8; margin-top: 12px; border-top: 1px solid #334155; pt: 8px; padding-top: 8px; }
+        .error-msg { color: #fca5a5; font-size: 0.85rem; background: #451a1a; padding: 8px; border-radius: 4px; margin-top: 10px; word-break: break-word; }
     </style>
 </head>
 <body>
-    <div class="container">
-        <h1>Overvåkingstjenester</h1>
-        <p class="sub">Siden oppdateres automatisk hvert 10. sekund</p>
-        <div id="grid">
-            
-        <div class="card">
-            <div class="card-header">
-                <h3>Nødvarsel-overvåker</h3>
-                <span class="badge ok">OK</span>
-            </div>
-            <p class="sub">Siste sjekk: <strong>2026-10-07 08:24:01</strong></p>
-            
-        </div>
-        
-        <div class="card">
-            <div class="card-header">
-                <h3>Mattilsynet-overvåker</h3>
-                <span class="badge ok">OK</span>
-            </div>
-            <p class="sub">Siste sjekk: <strong>2026-10-07 08:20:02</strong></p>
-            
-        </div>
-        
-        <div class="card">
-            <div class="card-header">
-                <h3>Ekstremvær-overvåker</h3>
-                <span class="badge ok">OK</span>
-            </div>
-            <p class="sub">Siste sjekk: <strong>2026-10-07 08:20:02</strong></p>
-            
-        </div>
-        
-        <div class="card">
-            <div class="card-header">
-                <h3>SSB KPI-overvåker</h3>
-                <span class="badge ok">OK</span>
-            </div>
-            <p class="sub">Siste sjekk: <strong>2026-10-07 08:02:48</strong></p>
-            
-        </div>
-        
-        </div>
-    </div>
+    <h1>Systemstatus – Nyhetsovervåking</h1>
+    <div id="dashboard" class="grid"><p style="text-align:center; grid-column: 1/-1;">Laster status...</p></div>
+
+    <script>
+        async function fetchStatus() {
+            try {
+                // Relativ sti uten skråstrek i starten for å treffe undermappen på GitHub Pages
+                const response = await fetch('status.json?t=' + new Date().getTime());
+                if (!response.ok) throw new Error("Fant ikke status.json (HTTP " + response.status + ")");
+                
+                const data = await response.json();
+                const container = document.getElementById('dashboard');
+                container.innerHTML = '';
+
+                if (Object.keys(data).length === 0) {
+                    container.innerHTML = '<p style="text-align:center; grid-column: 1/-1;">Ingen statussjekker registrert ennå.</p>';
+                    return;
+                }
+
+                for (const [key, item] of Object.entries(data)) {
+                    const statusClass = (item.status || 'unknown').toLowerCase();
+                    const card = document.createElement('div');
+                    card.className = `card ${statusClass}`;
+                    
+                    card.innerHTML = `
+                        <div class="header-row">
+                            <h2 class="card-title">${item.name || key}</h2>
+                            <span class="status-badge">${item.status || 'UKJENT'}</span>
+                        </div>
+                        ${item.error_msg ? `<div class="error-msg">⚠️ ${item.error_msg}</div>` : ''}
+                        <div class="meta">Sist oppdatert: ${item.last_updated || 'Ukjent'}</div>
+                    `;
+                    container.appendChild(card);
+                }
+            } catch (err) {
+                document.getElementById('dashboard').innerHTML = `<p style="color: #ef4444; text-align:center; grid-column: 1/-1;">Feil ved innlasting av dashbord: ${err.message}</p>`;
+            }
+        }
+
+        fetchStatus();
+        setInterval(fetchStatus, 30000); // Oppdaterer hvert 30. sekund
+    </script>
 </body>
 </html>
